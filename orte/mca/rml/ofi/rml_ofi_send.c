@@ -556,7 +556,7 @@ static void send_msg(int fd, short args, void *cbdata)
     OBJ_RELEASE(req);
 }
 
-int orte_rml_ofi_send_nb(void* mod,
+int orte_rml_ofi_send_nb(struct orte_rml_base_module_t* mod,
                                    orte_process_name_t* peer,
                                    struct iovec* iov,
                                    int count,
@@ -612,7 +612,7 @@ int orte_rml_ofi_send_nb(void* mod,
 }
 
 
-int orte_rml_ofi_send_buffer_nb(void* mod,
+int orte_rml_ofi_send_buffer_nb(struct orte_rml_base_module_t *mod,
                                               orte_process_name_t* peer,
                                               struct opal_buffer_t* buffer,
                                               orte_rml_tag_t tag,

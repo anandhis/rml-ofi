@@ -32,9 +32,9 @@ static int rml_ofi_component_open(void);
 static int rml_ofi_component_close(void);
 static orte_rml_base_module_t* open_conduit(opal_list_t *attributes);
 static orte_rml_pathway_t* query_transports(void);
-static char* get_contact_info(void);
-static void set_contact_info(const char *uri);
-static void close_conduit(orte_rml_base_module_t *mod);
+//static char* get_contact_info(void);
+//static void set_contact_info(const char *uri);
+//static void close_conduit(orte_rml_base_module_t *mod);
 /**
  * component definition
  */
@@ -58,19 +58,24 @@ orte_rml_component_t mca_rml_ofi_component = {
     .priority = 10,
     .open_conduit = open_conduit,
     .query_transports = query_transports,
-    .get_contact_info = get_contact_info,
-    .set_contact_info = set_contact_info,
-    .close_conduit = close_conduit
+    .get_contact_info = NULL,
+    .set_contact_info = NULL,
+    .close_conduit = NULL
 };
 
 /* Local variables */
-static orte_rml_base_module_t base_module = {
+orte_rml_ofi_module_t orte_rml_ofi = {
+    .api = {
     .component = (struct orte_rml_component_t*)&mca_rml_ofi_component,
     .ping = NULL,
     .send_nb = orte_rml_ofi_send_nb,
     .send_buffer_nb = orte_rml_ofi_send_buffer_nb,
     .purge = NULL
+    }
 };
+
+/* Local variables */
+static bool init_done = false;
 
 static int
 rml_ofi_component_open(void)
@@ -81,6 +86,7 @@ rml_ofi_component_open(void)
     orte_rml_ofi.min_ofi_recv_buf_sz = MIN_MULTI_BUF_SIZE;
     orte_rml_ofi.cur_msgid = 1;
     orte_rml_ofi.cur_transport_id = RML_OFI_CONDUIT_ID_INVALID;
+    orte_rml_ofi.conduit_open_num = 0;
 
     for( uint8_t conduit_id=0; conduit_id < MAX_CONDUIT ; conduit_id++) {
         orte_rml_ofi.ofi_conduits[conduit_id].fabric =  NULL;
@@ -95,7 +101,6 @@ rml_ofi_component_open(void)
         orte_rml_ofi.ofi_conduits[conduit_id].rxbuf_size = 0;
         orte_rml_ofi.ofi_conduits[conduit_id].progress_ev_active = false;
         orte_rml_ofi.ofi_conduits[conduit_id].conduit_id = RML_OFI_CONDUIT_ID_INVALID;
-        orte_rml_ofi.ofi_conduits[conduit_id].ofi_module = NULL;
     }
 
     opal_output_verbose(1,orte_rml_base_framework.framework_output," from %s:%d rml_ofi_component_open()",__FILE__,__LINE__);
@@ -149,10 +154,6 @@ void free_conduit_resources( int conduit_id)
          free(orte_rml_ofi.ofi_conduits[conduit_id].rxbuf);
     }
 
-    if (orte_rml_ofi.ofi_conduits[conduit_id].ofi_module) {
-        free(orte_rml_ofi.ofi_conduits[conduit_id].ofi_module);
-        orte_rml_ofi.ofi_conduits[conduit_id].ofi_module = NULL;
-    }
     orte_rml_ofi.ofi_conduits[conduit_id].fabric =  NULL;
     orte_rml_ofi.ofi_conduits[conduit_id].domain =  NULL;
     orte_rml_ofi.ofi_conduits[conduit_id].av     =  NULL;
@@ -165,7 +166,6 @@ void free_conduit_resources( int conduit_id)
     orte_rml_ofi.ofi_conduits[conduit_id].fabric_info = NULL;
     orte_rml_ofi.ofi_conduits[conduit_id].mr_multi_recv = NULL;
     orte_rml_ofi.ofi_conduits[conduit_id].conduit_id = RML_OFI_CONDUIT_ID_INVALID;
-    orte_rml_ofi.ofi_conduits[conduit_id].ofi_module = NULL;
     OPAL_LIST_DESTRUCT(&orte_rml_ofi.recv_msg_queue_list);
 
 
@@ -258,13 +258,17 @@ void print_provider_list_info (struct fi_info *fi )
  * This returns all the supported transports in the system that support endpoint type RDM (reliable datagram)
  * The providers returned is a list of type opal_valut_t holding opal_list_t
  */
-static int orte_rml_ofi_query_transports(opal_value_t **providers)
+/*[Anandhi] old defn static int orte_rml_ofi_query_transports(opal_value_t **providers) */
+static orte_rml_pathway_t* query_transports(void)
 {
     opal_list_t *ofi_prov = NULL;
     opal_value_t *providers_list, *prev_provider=NULL, *next_provider=NULL;
     struct fi_info *cur_fi = NULL;
     int ret = 0, prov_num = 0;
 
+ opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                        "\n%s:%d OFI Query Interface not implemented",__FILE__,__LINE__);
+/* [Anandhi] comment fully for now, as this needs to be re-written
     opal_output_verbose(10,orte_rml_base_framework.framework_output,
                         " %s -Begin of query_transports()",ORTE_NAME_PRINT(ORTE_PROC_MY_NAME) );
     if ( NULL == *providers)
@@ -291,7 +295,7 @@ static int orte_rml_ofi_query_transports(opal_value_t **providers)
 
         /*  populate the opal_list_t *ofi_prov with provider details from the
          *  orte_rml_ofi.fi_info_list array populated in the rml_ofi_component_init() fn.*/
-        ofi_prov = OBJ_NEW(opal_list_t);
+/*        ofi_prov = OBJ_NEW(opal_list_t);
         opal_output_verbose(10,orte_rml_base_framework.framework_output,
                             "\n loading the attribute ORTE_CONDUIT_ID");
         if( ORTE_SUCCESS !=
@@ -332,12 +336,13 @@ static int orte_rml_ofi_query_transports(opal_value_t **providers)
     }
 
     opal_output_verbose(10,orte_rml_base_framework.framework_output,
-                        "\n%s:%d Completed Query Interface",__FILE__,__LINE__);
+                        "\n%s:%d Completed Query Interface",__FILE__,__LINE__);*/
     return ORTE_SUCCESS;
 }
 
 
 /*debug routine to print the opal_value_t returned by query interface */
+/* [Anandhi] - this has to be re-written
 void print_transports_query()
 {
     opal_value_t *providers=NULL;
@@ -391,7 +396,7 @@ void print_transports_query()
     opal_output_verbose(10,orte_rml_base_framework.framework_output,
                         "\n End of print_transports_query() \n");
 }
-
+*/
 
 
 
@@ -565,8 +570,10 @@ int cq_progress_handler(int sd, short flags, void *cbdata)
 }
 
 
-static orte_rml_base_module_t*
-rml_ofi_component_init(int* priority)
+/* 
+ * Returns the number of ofi-providers available
+ */
+int rml_ofi_component_init()
 {
     int ret, fi_version;
     struct fi_info *hints, *fabric_info;
@@ -579,23 +586,12 @@ rml_ofi_component_init(int* priority)
     opal_output_verbose(20,orte_rml_base_framework.framework_output,
                         "%s - Entering rml_ofi_component_init()",ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
 
-    /*[TODO] Limiting current implementation to APP PROCs.  The PMIX component does not get initialised for
-     *        ORTE_DAEMON_PROC so the OPAL_MODEX_SEND_STRING (opal_pmix.put) fails during initialisation,
-     *        this needs to be fixed to support DAEMON PROC to use ofi
-    */
-    if (!ORTE_PROC_IS_APP) {
-        *priority = 0;
-        return NULL;
-    }
 
     if (init_done) {
-        *priority = 2;
-        return &orte_rml_ofi.api;
+         return orte_rml_ofi.conduit_open_num;
     }
 
-    *priority = 2;
-
-
+ 
     /**
      * Hints to filter providers
      * See man fi_getinfo for a list of all filters
@@ -612,7 +608,7 @@ rml_ofi_component_init(int* priority)
         opal_output_verbose(1, orte_rml_base_framework.framework_output,
                             "%s:%d: Could not allocate fi_info\n",
                             __FILE__, __LINE__);
-        return NULL;
+        return orte_rml_ofi.conduit_open_num;
     }
 
     /**
@@ -966,10 +962,6 @@ rml_ofi_component_init(int* priority)
             opal_event_add(&orte_rml_ofi.ofi_conduits[cur_conduit].progress_event, 0);
             orte_rml_ofi.ofi_conduits[cur_conduit].progress_ev_active = true;
 
-            /** allocate space for module to be returned if this ofi_conduit transport is requested by rml */
-            orte_rml_ofi.ofi_conduits[cur_conduit].ofi_module =  (orte_rml_ofi_module_t*)calloc(1, sizeof(orte_rml_ofi_module_t));
-            /* copy the function pointers across */
-            memcpy(orte_rml_ofi.ofi_conduits[cur_conduit].ofi_module, &orte_rml_ofi, sizeof(orte_rml_ofi_module_t));
             /** update the number of conduits in the ofi_conduits[] array **/
             opal_output_verbose(1,orte_rml_base_framework.framework_output,
                  "%s:%d Conduit id - %d created ",__FILE__,__LINE__,orte_rml_ofi.conduit_open_num);
@@ -987,34 +979,31 @@ rml_ofi_component_init(int* priority)
     */
     fi_freeinfo(hints);
     hints = NULL;
-    /* only if atleast one conduit was successfully opened then return the module */
+    /* check if atleast one conduit was successfully opened */
     if (0 < orte_rml_ofi.conduit_open_num ) {
         opal_output_verbose(1,orte_rml_base_framework.framework_output,
                     "%s:%d OFIconduits openened=%d returning orte_rml_ofi.api",
                     __FILE__,__LINE__,orte_rml_ofi.conduit_open_num);
 
         OBJ_CONSTRUCT(&orte_rml_ofi.recv_msg_queue_list,opal_list_t);
-        init_done = true;
-        orte_rml_ofi.api.tot_num_transports = orte_rml_ofi.conduit_open_num;
-        return &orte_rml_ofi.api;
     } else {
         opal_output_verbose(1,orte_rml_base_framework.framework_output,
                     "%s:%d Failed to open any OFIconduits",__FILE__,__LINE__);
-        return NULL;
     }
 
+    return orte_rml_ofi.conduit_open_num;
 }
 
-/* return : the ofi_conduit that corresponds to the transport requested by the attributes
+/* return : the ofi_prov_id that corresponds to the transport requested by the attributes
             if transport is not found RML_OFI_CONDUIT_ID_INVALID is returned.
     @[in]attributes  : the attributes passed in to open_conduit reg the transport requested
 */
-int get_ofi_conduit_id( opal_list_t *attributes)
+int get_ofi_prov_id( opal_list_t *attributes)
 {
 
-    int ofi_conduit_id = RML_OFI_CONDUIT_ID_INVALID, prov_num=0;
+    int ofi_prov_id = RML_OFI_CONDUIT_ID_INVALID, prov_num=0;
     char *provider = NULL, *transport = NULL;
-    char *ethernet="sockets", *fabric="fabric"; /*[TODO] - replace the string for fabric with right value for OPA*/
+    char *ethernet="sockets", *fabric="psm2"; 
     struct fi_info *cur_fi;
 
     /* check the list of attributes to see if we should respond
@@ -1032,41 +1021,148 @@ int get_ofi_conduit_id( opal_list_t *attributes)
     }
     /* if from the transport we don't know which provider we want, then check for the ORTE_RML_OFI_PROV_NAME_ATTRIB */
     if ( NULL == provider) {
-       orte_get_attribute(attributes, ORTE_RML_OFI_PROV_NAME_ATTRIB, (void**)&provider, OPAL_STRING);
+       orte_get_attribute(attributes, ORTE_RML_PROVIDER_ATTRIB, (void**)&provider, OPAL_STRING);
     }
-    if (provider != NULL)
+    if (NULL != provider)
     {
         // loop the orte_rml_ofi.conduits[] and find the provider name that matches
-        for ( prov_num = 0; prov_num < orte_rml_ofi.conduit_open_num && ofi_conduit_id == RML_OFI_CONDUIT_ID_INVALID ; prov_num++ ) {
+        for ( prov_num = 0; prov_num < orte_rml_ofi.conduit_open_num && ofi_prov_id == RML_OFI_CONDUIT_ID_INVALID ; prov_num++ ) {
             cur_fi = orte_rml_ofi.ofi_conduits[prov_num].fabric_info;
+            opal_output_verbose(20,orte_rml_base_framework.framework_output,
+               "%s - get_ofi_prov_id() -> comparing %s = %s ",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),provider,cur_fi->fabric_attr->prov_name);
             if ( strcmp(provider,cur_fi->fabric_attr->prov_name) == 0) {
-                ofi_conduit_id = prov_num;
+                ofi_prov_id = prov_num;
             }
         }
 
     }
 
-    return ofi_conduit_id;
+    opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - get_ofi_prov_id(), returning ofi_prov_id=%d ",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),ofi_prov_id);
+    return ofi_prov_id;
 }
 
-static orte_rml_base_module_t* open_conduit(opal_list_t *attributes)
+/* 
+ * Allocate a new module and initialise ofi_prov information
+ * for the requested provider and return the module *
+ */
+static orte_rml_base_module_t* make_module( int ofi_prov_id)
 {
     orte_rml_ofi_module_t *mod = NULL;
-    int ofi_conduit_id = RML_OFI_CONDUIT_ID_INVALID;
 
-    ofi_conduit_id = get_ofi_conduit_id(attributes);
-    if ( ofi_conduit_id == RML_OFI_CONDUIT_ID_INVALID) {
-        return mod;
+    opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - rml_ofi make_module() begin ",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+
+    if ( RML_OFI_CONDUIT_ID_INVALID == ofi_prov_id) {
+        opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - open_conduit did not select any ofi provider, returning NULL ",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+        return NULL;
     }
-    /* we will provide this module - to make sure we don't open multiple modules we return *
-     * the one allocated at init associated with this ofi_conduit(transport)    */
-    mod = orte_rml_ofi.ofi_conduits[ofi_conduit_id].ofi_module;
 
+
+    /* create a new module   */
+    mod = (orte_rml_ofi_module_t*)calloc(1,sizeof(orte_rml_ofi_module_t));
+    if (NULL == mod) {
+        opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - Module allocation failed, returning NULL ",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+        return NULL;
+    }
+    /* copy the APIs over to it and the OFI provider information */
+    memcpy(mod, &orte_rml_ofi, sizeof(orte_rml_ofi_module_t));
     /*  setup the remaining data locations in mod to reflect the current conduit*/
-    mod->cur_transport_id = ofi_conduit_id;
+    mod->cur_transport_id = ofi_prov_id;
 
-    return mod;
+    return (orte_rml_base_module_t*)mod;
 }
+
+
+/* Order of attributes honoring          *
+* ORTE_RML_INCLUDE_COMP_ATTRIB           *
+* ORTE_RML_EXCLUDE_COMP_ATTRIB           *
+* ORTE_RML_TRANSPORT_ATTRIB              *
+* ORTE_RML_PROVIDER_ATTRIB               */
+static orte_rml_base_module_t* open_conduit(opal_list_t *attributes)
+{
+char *comp_attrib = NULL;
+    char **comps;
+    int i;
+    orte_attribute_t *attr;
+
+    opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - Entering rml_ofi_open_conduit()",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+
+    /*[TODO] Limiting current implementation to APP PROCs.  The PMIX component does not get initialised for
+     *        ORTE_DAEMON_PROC so the OPAL_MODEX_SEND_STRING (opal_pmix.put) fails during initialisation,
+     *        this needs to be fixed to support DAEMON PROC to use ofi
+    */
+    if (!ORTE_PROC_IS_APP) {
+        opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - Currently not handling Daemons, returning NULL",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+        return NULL;
+    }
+
+    /* Open all ofi endpoints */
+    if (!init_done) {
+        rml_ofi_component_init();
+        init_done = true;
+    }
+
+    /* check if atleast 1 ofi provider is initialised */
+    if ( 0 >= orte_rml_ofi.conduit_open_num) {
+        opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - Init did not open any Ofi endpoints, returning NULL",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+        return NULL;
+    }    
+
+    /* someone may require this specific component, so look for "ofi" */
+    if (orte_get_attribute(attributes, ORTE_RML_INCLUDE_COMP_ATTRIB, (void**)&comp_attrib, OPAL_STRING) &&
+        NULL != comp_attrib) {
+        /* they specified specific components - could be multiple */
+        comps = opal_argv_split(comp_attrib, ',');
+        for (i=0; NULL != comps[i]; i++) {
+            if (0 == strcmp(comps[i], "ofi")) {
+                /* we are a candidate,  */
+                opal_argv_free(comps);
+                return make_module(get_ofi_prov_id(attributes));
+            }
+        }
+        /* we are not a candidate */
+        opal_argv_free(comps);
+        return NULL;
+    } else if (orte_get_attribute(attributes, ORTE_RML_EXCLUDE_COMP_ATTRIB, (void**)&comp_attrib, OPAL_STRING) &&
+               NULL != comp_attrib) {
+        /* see if we are on the list */
+        comps = opal_argv_split(comp_attrib, ',');
+        for (i=0; NULL != comps[i]; i++) {
+            if (0 == strcmp(comps[i], "ofi")) {
+                /* we cannot be a candidate */
+                opal_argv_free(comps);
+                return NULL;
+            }
+        }
+    }
+
+    /* Alternatively, check the attributes to see if we qualify - we only handle
+     * "pt2pt" */
+    OPAL_LIST_FOREACH(attr, attributes, orte_attribute_t) {
+
+    }
+
+    opal_output_verbose(20,orte_rml_base_framework.framework_output,
+                    "%s - ofi is not a candidate as per attributes, returning NULL",
+                    ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+    /* if we get here, we cannot handle it */
+    return NULL;
+}
+
 
 
 static void orte_rml_ofi_fini(void *mod)

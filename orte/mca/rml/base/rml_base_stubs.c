@@ -74,11 +74,8 @@ orte_rml_conduit_t orte_rml_API_open_conduit(opal_list_t *attributes)
                                     "%s rml:base:open_conduit Component %s provided a conduit",
                                     ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),
                                     active->component->base.mca_component_name);
-                /* retain this answer */
-                if (NULL != ourmod) {
-                    free(ourmod);
-                }
                 ourmod = mod;
+                break;
             }
         }
     }
