@@ -26,6 +26,9 @@
 
 #include "rml_ofi_request.h"
 
+/** the maximum open OFI conduit - assuming system will have no more than 20 transports*/
+#define MAX_CONDUIT  40
+#define RML_OFI_CONDUIT_ID_INVALID 0xFF
 
 /** RML/OFI key values  **/
 /* (char*)  ofi socket address (type IN) of the node process is running on */
@@ -116,10 +119,6 @@ typedef struct {
 
     struct fi_context rx_ctx1;
 
-   /* module associated with this conduit_id returned to rml
-      from open_conduit call */
-   struct orte_rml_ofi_module_t *ofi_module;
-
 } ofi_transport_conduit_t;
 
 
@@ -156,6 +155,7 @@ typedef struct orte_rml_ofi_module_t orte_rml_ofi_module_t;
 
 
 ORTE_MODULE_DECLSPEC extern orte_rml_component_t mca_rml_ofi_component;
+extern orte_rml_ofi_module_t orte_rml_ofi;
 
 int orte_rml_ofi_send_buffer_nb(struct orte_rml_base_module_t *mod,
                                 orte_process_name_t* peer,
