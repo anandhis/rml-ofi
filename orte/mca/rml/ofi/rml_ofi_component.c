@@ -581,6 +581,7 @@ int rml_ofi_component_init()
     struct fi_av_attr av_attr = {0};
     size_t namelen;
     char   ep_name[FI_NAME_MAX]= {0};
+    char *pmix_key;
     uint8_t fabric_id = 0, cur_conduit;
 
     opal_output_verbose(20,orte_rml_base_framework.framework_output,
@@ -844,10 +845,15 @@ int rml_ofi_component_init()
                             "%s port = 0x%x, InternetAddr = %s  ",
                             ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),ntohs(ep_sockaddr->sin_port),inet_ntoa(ep_sockaddr->sin_addr));
                     /*[end debug]*/
+                    asprintf(&pmix_key,"%s%d",OPAL_RML_OFI_FI_SOCKADDR_IN,cur_conduit);
+                    opal_output_verbose(10, orte_rml_base_framework.framework_output,
+                         "%s calling OPAL_MODEX_SEND_STRING key - %s ", 
+                          ORTE_NAME_PRINT(ORTE_PROC_MY_NAME), pmix_key );
                     OPAL_MODEX_SEND_STRING( ret, OPAL_PMIX_GLOBAL,
-                                            OPAL_RML_OFI_FI_SOCKADDR_IN,
+                                            pmix_key,
                                             orte_rml_ofi.ofi_conduits[cur_conduit].ep_name,
                                             orte_rml_ofi.ofi_conduits[cur_conduit].epnamelen);
+                    free(pmix_key);
                     if (ORTE_SUCCESS != ret) {
                         opal_output_verbose(1, orte_rml_base_framework.framework_output,
                                     "%s:%d: OPAL_MODEX_SEND failed: %s\n",
