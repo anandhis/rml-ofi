@@ -329,7 +329,7 @@ static void send_msg(int fd, short args, void *cbdata)
     orte_rml_send_request_t *req = (orte_rml_send_request_t*)cbdata;
     orte_process_name_t *peer = &(req->send.dst);
     orte_rml_tag_t tag = req->send.tag;
-    char *dest_ep_name;
+    char *dest_ep_name, *pmix_key;
     size_t dest_ep_namelen = 0;
     int ret = OPAL_ERROR;
     uint32_t  total_packets;
@@ -362,12 +362,17 @@ static void send_msg(int fd, short args, void *cbdata)
 
 
     /* get the peer address by doing modex_receive 	*/
-    opal_output_verbose(10, orte_rml_base_framework.framework_output,
-                         "%s calling OPAL_MODEX_RECV_STRING ", ORTE_NAME_PRINT(ORTE_PROC_MY_NAME) );
+
     switch ( orte_rml_ofi.ofi_conduits[conduit_id].fabric_info->addr_format)
     {
        case  FI_SOCKADDR_IN :
-             OPAL_MODEX_RECV_STRING(ret, OPAL_RML_OFI_FI_SOCKADDR_IN, peer , (char **) &dest_ep_name, &dest_ep_namelen);
+                    asprintf(&pmix_key,"%s%d",OPAL_RML_OFI_FI_SOCKADDR_IN,conduit_id);
+                  opal_output_verbose(10, orte_rml_base_framework.framework_output,
+                         "%s calling OPAL_MODEX_RECV_STRING peer - %s, key - %s ", 
+                          ORTE_NAME_PRINT(ORTE_PROC_MY_NAME), ORTE_NAME_PRINT(peer),pmix_key );
+             OPAL_MODEX_RECV_STRING(ret, pmix_key, peer , (char **) &dest_ep_name, &dest_ep_namelen);
+             opal_output_verbose(10, orte_rml_base_framework.framework_output, "Returned from MODEX_RECV");
+              free(pmix_key);
                 /*print the sockaddr - port and s_addr */
                 struct sockaddr_in* ep_sockaddr = (struct sockaddr_in*) dest_ep_name;
                 opal_output_verbose(10,orte_rml_base_framework.framework_output,

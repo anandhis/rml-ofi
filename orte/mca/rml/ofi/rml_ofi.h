@@ -32,7 +32,7 @@
 
 /** RML/OFI key values  **/
 /* (char*)  ofi socket address (type IN) of the node process is running on */
-#define OPAL_RML_OFI_FI_SOCKADDR_IN                "rml.ofi.fisockaddrin"
+#define OPAL_RML_OFI_FI_SOCKADDR_IN       "rml.ofi.fisockaddrin" 
 /* (char*)  ofi socket address (type PSM) of the node process is running on */
 #define OPAL_RML_OFI_FI_ADDR_PSMX                  "rml.ofi.fiaddrpsmx"
 
