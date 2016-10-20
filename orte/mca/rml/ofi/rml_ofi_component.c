@@ -1309,10 +1309,12 @@ static char* ofi_get_contact_info(void)
                 case  FI_ADDR_PSMX :
                     asprintf(&addrtype, PSMXADDR); 
                     /* [TBD]  The ep_name has to be converted to PSMX specific address format struct for printing
-                    copy the endpoint name as is to length specified - this fails in sprintf as the ep_name is a binary content
+                    copy the endpoint name as is to length specified - this fails in sprintf as the ep_name is a
+                    binary content
                     turi = calloc(orte_rml_ofi.ofi_conduits[cur_conduit].epnamelen + 1, sizeof(char));
                     memcpy( turi, orte_rml_ofi.ofi_conduits[cur_conduit].ep_name, orte_rml_ofi.ofi_conduits[cur_conduit].epnamelen);
                     turi[ (orte_rml_ofi.ofi_conduits[cur_conduit].epnamelen + 1) ] = '\0';*/
+		    asprintf(&turi, "psmx addr");
                     break;
                 default:
                     opal_output_verbose(1,orte_rml_base_framework.framework_output,
