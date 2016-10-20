@@ -209,20 +209,26 @@ int orte_rml_base_select(void)
     }
 
     /* Open the default oob conduit */
-    opal_output_verbose(10, orte_rml_base_framework.framework_output,
+    /*opal_output_verbose(10, orte_rml_base_framework.framework_output,
                         "%s Opening the default conduit - oob component",
-                        ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+                        ORTE_NAME_PRINT(ORTE_PROC_MY_NAME)); */
+    opal_output_verbose(10, orte_rml_base_framework.framework_output,
+                         "%s Opening the default conduit - ofi ethernet component",
+                         ORTE_NAME_PRINT(ORTE_PROC_MY_NAME)); 
     OBJ_CONSTRUCT(&conduit_attr, opal_list_t);
-    orte_set_attribute(&conduit_attr, ORTE_RML_INCLUDE_COMP_ATTRIB, ORTE_ATTR_LOCAL,"oob",OPAL_STRING);
+    /*[Anandhi] testing ofi daemon support 
+    orte_set_attribute(&conduit_attr, ORTE_RML_INCLUDE_COMP_ATTRIB, ORTE_ATTR_LOCAL,"oob",OPAL_STRING); */
+    orte_set_attribute( &conduit_attr, ORTE_RML_INCLUDE_COMP_ATTRIB, ORTE_ATTR_GLOBAL,"ofi",OPAL_STRING);
+    orte_set_attribute( &conduit_attr, ORTE_RML_PROVIDER_ATTRIB, ORTE_ATTR_GLOBAL,"sockets",OPAL_STRING);
     orte_rml_base.def_conduit_id = orte_rml_API_open_conduit(&conduit_attr);
     OPAL_LIST_DESTRUCT(&conduit_attr);
     if (0 <= orte_rml_base.def_conduit_id) {
         opal_output_verbose(10, orte_rml_base_framework.framework_output,
-                            "%s Default conduit (oob) opened with conduit id = %d",
+                            "%s Default conduit (ofi) opened with conduit id = %d",
                             ORTE_NAME_PRINT(ORTE_PROC_MY_NAME), orte_rml_base.def_conduit_id);
     } else {
         opal_output_verbose(1, orte_rml_base_framework.framework_output,
-                            "%s Default conduit (oob) could not be opened",
+                            "%s Default conduit (ofi) could not be opened",
                             ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
     }
 

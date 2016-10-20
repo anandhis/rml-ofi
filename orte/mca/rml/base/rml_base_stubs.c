@@ -137,6 +137,9 @@ char* orte_rml_API_get_contact_info(void)
     } else {
         tmp = NULL;
     }
+    opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                         "%s rml:base:get_contact_info() returning -> %s",
+                         ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),tmp);
     return tmp;
 }
 
