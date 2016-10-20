@@ -224,6 +224,50 @@ rml_ofi_component_close(void)
     return ORTE_SUCCESS;
 }
 
+
+void print_provider_info (struct fi_info *cur_fi )
+{
+    //Display all the details in the fi_info structure
+    opal_output_verbose(1,orte_rml_base_framework.framework_output,
+                        " %s - Print_provider_info() ",
+                        ORTE_NAME_PRINT(ORTE_PROC_MY_NAME));
+
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->caps                  :  0x%x \n",cur_fi->caps);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->mode                  :  0x%x \n",cur_fi->mode);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->address_format        :  0x%x \n",cur_fi->addr_format);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->fabric_attr->provname :  %s \n",cur_fi->fabric_attr->prov_name);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->src_address           :  0x%x \n",cur_fi->src_addr);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " fi_info[]->dest_address          :  0x%x \n",cur_fi->dest_addr);
+        opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                            " EndPoint Attributes (ep_attr)    :");
+        switch( cur_fi->ep_attr->type)
+        {
+            case FI_EP_UNSPEC:
+                 opal_output_verbose(10,orte_rml_base_framework.framework_output," FI_EP_UNSPEC \n");
+                 break;
+            case FI_EP_MSG:
+                 opal_output_verbose(10,orte_rml_base_framework.framework_output," FI_EP_MSG \n");
+                 break;
+            case FI_EP_DGRAM:
+                 opal_output_verbose(10,orte_rml_base_framework.framework_output," FI_EP_DGRAM \n");
+                 break;
+            case FI_EP_RDM:
+                 opal_output_verbose(10,orte_rml_base_framework.framework_output," FI_EP_RDM \n");
+                 break;
+            default:
+                 opal_output_verbose(10,orte_rml_base_framework.framework_output," %d",cur_fi->ep_attr->type);
+    }
+    opal_output_verbose(10,orte_rml_base_framework.framework_output,
+                        " Protocol            : 0x%x \n", cur_fi->ep_attr->protocol);
+ }
+
+
 void print_provider_list_info (struct fi_info *fi )
 {
     struct fi_info *cur_fi = fi;
@@ -686,6 +730,7 @@ int rml_ofi_component_init()
         {
             opal_output_verbose(100,orte_rml_base_framework.framework_output,
                  "%s:%d beginning to add endpoint for OFIconduit_id=%d ",__FILE__,__LINE__,orte_rml_ofi.conduit_open_num);
+            print_provider_info(fabric_info);
             cur_conduit = orte_rml_ofi.conduit_open_num;
             orte_rml_ofi.ofi_conduits[cur_conduit].conduit_id = orte_rml_ofi.conduit_open_num ;
             orte_rml_ofi.ofi_conduits[cur_conduit].fabric_info = fabric_info;
@@ -726,7 +771,7 @@ int rml_ofi_component_init()
                                     "%s:%d: fi_domain failed: %s\n",
                                     __FILE__, __LINE__, fi_strerror(-ret));
                 orte_rml_ofi.ofi_conduits[cur_conduit].domain = NULL;
-                free_conduit_resources(cur_conduit);
+                //[Anandhi] free_conduit_resources(cur_conduit);
                 /* abort this current transport, but check if next transport can be opened */
                 continue;
             }
