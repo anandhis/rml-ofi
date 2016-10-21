@@ -335,7 +335,7 @@ static orte_rml_pathway_t* query_transports(void)
 
  opal_output_verbose(10,orte_rml_base_framework.framework_output,
                         "\n%s:%d OFI Query Interface not implemented",__FILE__,__LINE__);
-/* [Anandhi] comment fully for now, as this needs to be re-written
+/* [Anandhi] comment fully for now, as this implementation is for old defn needs to be re-written
     opal_output_verbose(10,orte_rml_base_framework.framework_output,
                         " %s -Begin of query_transports()",ORTE_NAME_PRINT(ORTE_PROC_MY_NAME) );
     if ( NULL == *providers)
@@ -771,7 +771,6 @@ int rml_ofi_component_init()
                                     "%s:%d: fi_domain failed: %s\n",
                                     __FILE__, __LINE__, fi_strerror(-ret));
                 orte_rml_ofi.ofi_conduits[cur_conduit].domain = NULL;
-                //[Anandhi] free_conduit_resources(cur_conduit);
                 /* abort this current transport, but check if next transport can be opened */
                 continue;
             }
@@ -1400,7 +1399,7 @@ static void process_uri( char *uri)
                             "%s:OFI set_contact_info peer %s is me",
                             ORTE_NAME_PRINT(ORTE_PROC_MY_NAME),
                             ORTE_NAME_PRINT(&peer));
-          //[Anandhi] to be fixed, for now for HNP as well adding to hashtable
+          //skip adding to hashtable for HNP
         if (!ORTE_PROC_IS_HNP) {
            return;
         } else {
